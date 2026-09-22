@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>FABLOCK CODE EDITOR</title>
+
+  <!-- CodeMirror -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+  <!-- JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #080b10;
+      --panel: #0d1118;
+      --panel2: #111722;
+      --border: #202938;
+      --text: #e7edf7;
+      --muted: #7f8b9d;
+      --accent: #4f8cff;
+      --accent2: #3675e8;
+      --danger: #ff4d67;
+      --success: #36d399;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      outline: 0;
+      cursor: pointer;
+      background: transparent;
+      color: inherit;
+    }
+
+    button:active {
+      transform: scale(.96);
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 56px;
+      min-height: 56px;
+      background: #0b0f15;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #4f8cff, #7b5cff);
+      color: white;
+      font-weight: 900;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .brand-name {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+
+    .project-name {
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: transparent;
+      color: #d9e1ed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn:hover {
+      background: #151c27;
+    }
+
+    .run-btn {
+      background: var(--accent);
+      color: white;
+    }
+
+    .run-btn:hover {
+      background: var(--accent2);
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      position: relative;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: transform .25s;
+      z-index: 15;
+    }
+
+    .sidebar-header {
+      height: 50px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+    }
+
+    .sidebar-title {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 800;
+      color: #b8c3d3;
+      letter-spacing: .8px;
+    }
+
+    .small-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #151c26;
+      color: #dce5f2;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .small-btn:hover {
+      background: #1c2634;
+    }
+
+    .search {
+      padding: 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search input {
+      width: 100%;
+      height: 34px;
+      border-radius: 7px;
+      border: 1px solid #202a38;
+      background: #080c12;
+      color: white;
+      outline: none;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .search input:focus {
+      border-color: var(--accent);
+    }
+
+    /* TREE */
+    .tree {
+      flex: 1;
+      overflow: auto;
+      padding: 7px 5px 20px;
+    }
+
+    .tree::-webkit-scrollbar,
+    .editor-wrap::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .tree::-webkit-scrollbar-thumb,
+    .editor-wrap::-webkit-scrollbar-thumb {
+      background: #273244;
+      border-radius: 10px;
+    }
+
+    .tree-row {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 6px;
+      padding: 0 7px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: #cbd5e3;
+    }
+
+    .tree-row:hover {
+      background: #151c26;
+    }
+
+    .tree-row.active {
+      background: #182b4c;
+      color: #fff;
+    }
+
+    .tree-row.folder {
+      font-weight: 700;
+    }
+
+    .tree-icon {
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .tree-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .folder-children {
+      margin-left: 17px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* WORKSPACE */
+    .workspace {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TABS */
+    .tabs {
+      height: 40px;
+      min-height: 40px;
+      background: #0a0e14;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: stretch;
+      overflow-x: auto;
+    }
+
+    .tabs::-webkit-scrollbar {
+      height: 0;
+    }
+
+    .tab {
+      min-width: 125px;
+      max-width: 180px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      border-right: 1px solid var(--border);
+      color: #8e9aac;
+      cursor: pointer;
+      font-size: 12px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: #111722;
+    }
+
+    .tab.active:before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tab-name {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .tab-close {
+      opacity: .6;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .tab-close:hover {
+      opacity: 1;
+    }
+
+    /* EDITOR TOOLBAR */
+    .editor-toolbar {
+      height: 40px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 8px;
+      background: #0d121a;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .tool {
+      width: 31px;
+      height: 30px;
+      border-radius: 6px;
+      background: transparent;
+      color: #aeb9c8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tool:hover {
+      background: #18202c;
+      color: white;
+    }
+
+    .file-path {
+      margin-left: 5px;
+      color: #68768a;
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .save-status {
+      font-size: 10px;
+      color: #5d6a7e;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* EDITOR */
+    .editor-wrap {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .CodeMirror {
+      position: absolute;
+      inset: 0;
+      height: 100% !important;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .CodeMirror-gutters {
+      background: #0b1017 !important;
+      border-right: 1px solid #18202b !important;
+    }
+
+    .CodeMirror-linenumber {
+      color: #475466 !important;
+    }
+
+    .CodeMirror-cursor {
+      border-left: 2px solid #8bb3ff !important;
+    }
+
+    .CodeMirror-selected {
+      background: #264d7c !important;
+    }
+
+    /* EMPTY EDITOR */
+    .empty-editor {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #667387;
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .empty-editor .big {
+      font-size: 45px;
+      margin-bottom: 15px;
+    }
+
+    .empty-editor h2 {
+      color: #aeb9c8;
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+
+    .empty-editor p {
+      font-size: 12px;
+    }
+
+    /* STATUS */
+    .statusbar {
+      height: 24px;
+      min-height: 24px;
+      background: #111722;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 9px;
+      gap: 14px;
+      color: #7e8b9d;
+      font-size: 10px;
+    }
+
+    .status-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .status-right {
+      margin-left: auto;
+    }
+
+    /* PREVIEW */
+    .preview {
+      position: absolute;
+      inset: 0;
+      background: white;
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+    }
+
+    .preview.show {
+      display: flex;
+    }
+
+    .preview-bar {
+      height: 48px;
+      min-height: 48px;
+      background: #0c1118;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+    }
+
+    .preview-title {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .preview iframe {
+      flex: 1;
+      width: 100%;
+      border: 0;
+      background: white;
+    }
+
+    /* MOBILE NAV */
+    .mobile-bottom {
+      display: none;
+      height: 56px;
+      min-height: 56px;
+      background: #0b0f15;
+      border-top: 1px solid var(--border);
+      align-items: center;
+      justify-content: space-around;
+    }
+
+    .mobile-nav {
+      width: 25%;
+      height: 100%;
+      background: none;
+      color: #768398;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 18px;
+    }
+
+    .mobile-nav span {
+      font-size: 9px;
+    }
+
+    .mobile-nav.active {
+      color: #76a5ff;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .65);
+      backdrop-filter: blur(5px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(420px, 100%);
+      background: #111722;
+      border: 1px solid #263143;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, .5);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      flex: 1;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .modal-body {
+      padding: 16px;
+    }
+
+    .input-label {
+      color: #8592a5;
+      font-size: 11px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .modal-input {
+      width: 100%;
+      height: 42px;
+      background: #080d13;
+      color: white;
+      border: 1px solid #263143;
+      border-radius: 8px;
+      padding: 0 11px;
+      outline: none;
+    }
+
+    .modal-input:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      padding: 0 16px 16px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      height: 38px;
+      padding: 0 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #1a2330;
+      color: #dce5f2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn.danger {
+      background: #431923;
+      color: #ff91a1;
+    }
+
+    /* CONTEXT MENU */
+    .context-menu {
+      position: fixed;
+      z-index: 200;
+      width: 180px;
+      background: #121923;
+      border: 1px solid #293445;
+      border-radius: 9px;
+      padding: 5px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, .5);
+      display: none;
+    }
+
+    .context-menu.show {
+      display: block;
+    }
+
+    .context-item {
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 10px;
+      color: #cbd5e1;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .context-item:hover {
+      background: #1b2533;
+    }
+
+    .context-item.danger {
+      color: #ff7587;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 70px;
+      transform: translateX(-50%) translateY(20px);
+      background: #151d29;
+      border: 1px solid #2a3749;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: .25s;
+      z-index: 300;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* MOBILE */
+    @media(max-width:760px) {
+      .sidebar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+        box-shadow: 20px 0 50px rgba(0, 0, 0, .45);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .mobile-bottom {
+        display: flex;
+      }
+
+      .topbar {
+        padding: 0 7px;
+      }
+
+      .brand-name {
+        font-size: 13px;
+      }
+
+      .editor-toolbar .optional {
+        display: none;
+      }
+
+      .file-path {
+        display: none;
+      }
+
+      .status-right {
+        display: none;
+      }
+
+      .statusbar {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn">☰</button>
+      <div class="logo">FB</div>
+      <div class="brand">
+        <div class="brand-name">FABLOCK CODE</div>
+        <div class="project-name" id="projectLabel">My Project</div>
+      </div>
+      <button class="icon-btn" id="newProjectBtn" title="New project">＋</button>
+      <button class="icon-btn" id="saveBtn" title="Save">💾</button>
+      <button class="icon-btn run-btn" id="runBtn" title="Preview">▶</button>
+    </header>
+
+    <main class="main">
+      <!-- SIDEBAR -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">EXPLORER</div>
+          <button class="small-btn" id="newFileBtn" title="New file">📄</button>
+          <button class="small-btn" id="newFolderBtn" title="New folder">📁</button>
+          <button class="small-btn" id="refreshBtn" title="Refresh">↻</button>
+        </div>
+        <div class="search">
+          <input id="searchInput" type="text" placeholder="Search files..." autocomplete="off">
+        </div>
+        <div class="tree" id="fileTree"></div>
+      </aside>
+
+      <!-- WORKSPACE -->
+      <section class="workspace">
+        <div class="tabs" id="tabs"></div>
+
+        <div class="editor-toolbar">
+          <button class="tool" id="undoBtn" title="Undo">↶</button>
+          <button class="tool" id="redoBtn" title="Redo">↷</button>
+          <button class="tool" id="cutBtn" title="Cut">✂</button>
+          <button class="tool" id="copyBtn" title="Copy">⧉</button>
+          <button class="tool" id="pasteBtn" title="Paste">📋</button>
+          <button class="tool optional" id="formatBtn" title="Format">✨</button>
+          <div class="file-path" id="filePath">No file selected</div>
+          <div class="save-status" id="saveStatus">Ready</div>
+        </div>
+
+        <div class="editor-wrap">
+          <div class="empty-editor" id="emptyEditor">
+            <div class="big">&lt;/&gt;</div>
+            <h2>FABLOCK CODE EDITOR</h2>
+            <p>Create or open a file to start coding</p>
+          </div>
+          <textarea id="codeEditor"></textarea>
+        </div>
+
+        <div class="statusbar">
+          <div class="status-left">
+            <span id="cursorInfo">Ln 1, Col 1</span>
+            <span id="languageInfo">Plain Text</span>
+            <span id="encodingInfo">UTF-8</span>
+          </div>
+          <div class="status-right">FABLOCK</div>
+        </div>
+      </section>
+
+      <!-- PREVIEW -->
+      <section class="preview" id="preview">
+        <div class="preview-bar">
+          <button class="icon-btn" id="closePreview">←</button>
+          <div class="preview-title">Live Preview</div>
+          <button class="icon-btn" id="refreshPreview">↻</button>
+        </div>
+        <iframe id="previewFrame" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+      </section>
+    </main>
+
+    <!-- MOBILE NAV -->
+    <nav class="mobile-bottom">
+      <button class="mobile-nav active" id="filesNav">📁<span>Files</span></button>
+      <button class="mobile-nav" id="editorNav">&lt;/&gt;<span>Editor</span></button>
+      <button class="mobile-nav" id="previewNav">▶<span>Preview</span></button>
+      <button class="mobile-nav" id="moreNav">⋮<span>More</span></button>
+    </nav>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">Create</div>
+        <button class="icon-btn" id="modalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="input-label" id="modalLabel">Name</label>
+        <input class="modal-input" id="modalInput" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="modalCancel">Cancel</button>
+        <button class="btn primary" id="modalConfirm">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEXT MENU -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-item" id="ctxOpen">📂 Open</div>
+    <div class="context-item" id="ctxRename">✏️ Rename</div>
+    <div class="context-item" id="ctxNewFile">📄 New file</div>
+    <div class="context-item" id="ctxNewFolder">📁 New folder</div>
+    <div class="context-item danger" id="ctxDelete">🗑️ Delete</div>
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+
+  <script>
+    (function() {
+      "use strict";
+
+      // =========================================================
+      // FABLOCK CODE EDITOR — FULLY WORKING
+      // =========================================================
+
+      const STORAGE_KEY = "FABLOCK_CODE_EDITOR_V1";
+
+      let state = {
+        projectName: "My Project",
+        root: {
+          type: "folder",
+          name: "My Project",
+          children: [{
+              type: "file",
+              name: "index.html",
+              content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Website</title>
+</head>
+<body>
+    <h1>Hello FABLOCK 👋</h1>
+    <p>Start building your website.</p>
+</body>
+</html>`
+            },
+            {
+              type: "folder",
+              name: "src",
+              children: [{
+                  type: "file",
+                  name: "style.css",
+                  content: `body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #101828;
+    color: white;
+    padding: 40px;
+}
+h1 { color: #4f8cff; }`
+                },
+                {
+                  type: "file",
+                  name: "app.js",
+                  content: `console.log("FABLOCK application started");`
+                }
+              ]
+            },
+            {
+              type: "folder",
+              name: "assets",
+              children: []
+            }
+          ]
+        },
+        activePath: null,
+        openTabs: [],
+        expanded: {}
+      };
+
+      let editor = null;
+      let contextTarget = null;
+      let modalMode = null;
+      let modalParent = null;
+      let autoSaveTimer = null;
+      let toastTimer = null;
+
+      // =========================================================
+      // HELPERS
+      // =========================================================
+
+      function uid() {
+        return Math.random().toString(36).slice(2) + Date.now().toString(36);
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) { /* ignore */ }
+        showToast("Saved");
+      }
+
+      function loadState() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return;
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.root) {
+            state = parsed;
+            if (!state.expanded) state.expanded = {};
+            if (!state.openTabs) state.openTabs = [];
+          }
+        } catch (e) {
+          console.warn("Could not load project");
+        }
+      }
+
+      function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 1500);
+      }
+
+      function escapeHTML(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // =========================================================
+      // PATH SYSTEM
+      // =========================================================
+
+      function getPath(node, target, current = []) {
+        if (node === target) return current;
+        if (node.type === "folder") {
+          for (const child of node.children) {
+            const result = getPath(child, target, [...current, child.name]);
+            if (result) return result;
+          }
+        }
+        return null;
+      }
+
+      function findNode(path) {
+        if (!path || path.length === 0) return state.root;
+        let node = state.root;
+        for (let i = 0; i < path.length; i++) {
+          if (node.type !== "folder") return null;
+          node = node.children.find(x => x.name === path[i]);
+          if (!node) return null;
+        }
+        return node;
+      }
+
+      function getParent(path) {
+        if (!path || path.length === 0) return null;
+        return findNode(path.slice(0, -1));
+      }
+
+      function pathString(path) {
+        return (path || []).join(" / ");
+      }
+
+      function findPathByName(node, name, path = []) {
+        if (node.type === "file" && node.name.toLowerCase() === name.toLowerCase()) {
+          return path;
+        }
+        if (node.type === "folder") {
+          for (const child of node.children) {
+            const found = findPathByName(child, name, [...path, child.name]);
+            if (found) return found;
+          }
+        }
+        return null;
+      }
+
+      function collectFiles(node) {
+        let files = [];
+        if (node.type === "file") files.push(node);
+        if (node.type === "folder") {
+          node.children.forEach(child => {
+            files = files.concat(collectFiles(child));
+          });
+        }
+        return files;
+      }
+
+      function findFirstFile(node, name) {
+        if (node.type === "file" && node.name.toLowerCase() === name.toLowerCase()) {
+          return node;
+        }
+        if (node.type === "folder") {
+          for (const child of node.children) {
+            const found = findFirstFile(child, name);
+            if (found) return found;
+          }
+        }
+        return null;
+      }
+
+      // =========================================================
+      // FILE TREE
+      // =========================================================
+
+      function renderTree() {
+        const tree = document.getElementById("fileTree");
+        if (!tree) return;
+        tree.innerHTML = "";
+        renderFolder(state.root, tree, []);
+      }
+
+      function renderFolder(folder, container, path) {
+        let children = [...(folder.children || [])];
+        const query = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
+
+        children.sort((a, b) => {
+          if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        for (const node of children) {
+          if (query) {
+            const matches = node.name.toLowerCase().includes(query);
+            if (!matches && node.type === "file") continue;
+          }
+
+          const nodePath = [...path, node.name];
+          const isActive = state.activePath &&
+            pathString(getPath(state.root, node)) === pathString(state.activePath);
+
+          const row = document.createElement("div");
+          row.className = "tree-row " +
+            (node.type === "folder" ? "folder " : "") +
+            (isActive ? "active" : "");
+          row.style.paddingLeft = (7 + path.length * 14) + "px";
+
+          const icon = document.createElement("span");
+          icon.className = "tree-icon";
+          icon.textContent = node.type === "folder" ?
+            (state.expanded[pathString(nodePath)] ? "📂" : "📁") :
+            getFileIcon(node.name);
+
+          const name = document.createElement("span");
+          name.className = "tree-name";
+          name.textContent = node.name;
+
+          row.appendChild(icon);
+          row.appendChild(name);
+          container.appendChild(row);
+
+          row.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (node.type === "folder") {
+              const key = pathString(nodePath);
+              state.expanded[key] = !state.expanded[key];
+              renderTree();
+            } else {
+              openFile(nodePath);
+            }
+          });
+
+          row.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            contextTarget = { node, path: nodePath };
+            showContextMenu(e.clientX, e.clientY);
+          });
+
+          if (node.type === "folder" && state.expanded[pathString(nodePath)]) {
+            const childrenContainer = document.createElement("div");
+            childrenContainer.className = "folder-children";
+            container.appendChild(childrenContainer);
+            renderFolder(node, childrenContainer, nodePath);
+          }
+        }
+      }
+
+      function getFileIcon(name) {
+        const ext = (name.split(".").pop() || "").toLowerCase();
+        const icons = {
+          html: "🌐", htm: "🌐", css: "🎨", js: "🟨", json: "🔶",
+          md: "📝", txt: "📄", svg: "🖼️", xml: "📰", php: "🐘",
+          py: "🐍", java: "☕"
+        };
+        return icons[ext] || "📄";
+      }
+
+      // =========================================================
+      // EDITOR
+      // =========================================================
+
+      function initializeEditor() {
+        editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+          theme: "material-darker",
+          lineNumbers: true,
+          lineWrapping: false,
+          tabSize: 4,
+          indentUnit: 4,
+          indentWithTabs: false,
+          autoCloseBrackets: true,
+          matchBrackets: true,
+          styleActiveLine: true,
+          extraKeys: {
+            "Ctrl-S": saveCurrentFile,
+            "Cmd-S": saveCurrentFile,
+            "Ctrl-Space": "autocomplete"
+          }
+        });
+
+        editor.on("change", () => {
+          if (!state.activePath) return;
+          const node = findNode(state.activePath);
+          if (!node) return;
+          node.content = editor.getValue();
+          setSaveStatus("Unsaved");
+          clearTimeout(autoSaveTimer);
+          autoSaveTimer = setTimeout(() => {
+            saveState();
+            setSaveStatus("Saved");
+          }, 700);
+        });
+
+        editor.on("cursorActivity", updateCursor);
+        editor.setValue("");
+        setTimeout(() => editor.refresh(), 100);
+      }
+
+      function openFile(path) {
+        const node = findNode(path);
+        if (!node || node.type !== "file") return;
+
+        state.activePath = path;
+
+        if (!state.openTabs.some(p => pathString(p) === pathString(path))) {
+          state.openTabs.push([...path]);
+        }
+
+        editor.setValue(node.content || "");
+        setEditorMode(node.name);
+
+        document.getElementById("emptyEditor").classList.add("hidden");
+        document.getElementById("filePath").textContent = pathString(path);
+        document.getElementById("projectLabel").textContent = state.projectName;
+        setSaveStatus("Saved");
+
+        renderTree();
+        renderTabs();
+
+        setTimeout(() => editor.refresh(), 30);
+        updateCursor();
+      }
+
+      function closeTab(index) {
+        const path = state.openTabs[index];
+        if (!path) return;
+
+        const isActive = state.activePath && pathString(path) === pathString(state.activePath);
+        state.openTabs.splice(index, 1);
+
+        if (isActive) {
+          const next = state.openTabs[index] || state.openTabs[index - 1];
+          if (next) {
+            openFile(next);
+          } else {
+            state.activePath = null;
+            editor.setValue("");
+            document.getElementById("emptyEditor").classList.remove("hidden");
+            document.getElementById("filePath").textContent = "No file selected";
+          }
+        }
+        renderTabs();
+      }
+
+      function renderTabs() {
+        const tabs = document.getElementById("tabs");
+        tabs.innerHTML = "";
+
+        state.openTabs.forEach((path, index) => {
+          const node = findNode(path);
+          if (!node) return;
+
+          const isActive = state.activePath && pathString(path) === pathString(state.activePath);
+
+          const tab = document.createElement("div");
+          tab.className = "tab " + (isActive ? "active" : "");
+
+          const icon = document.createElement("span");
+          icon.textContent = getFileIcon(node.name);
+
+          const name = document.createElement("span");
+          name.className = "tab-name";
+          name.textContent = node.name;
+
+          const close = document.createElement("span");
+          close.className = "tab-close";
+          close.textContent = "×";
+
+          tab.appendChild(icon);
+          tab.appendChild(name);
+          tab.appendChild(close);
+          tabs.appendChild(tab);
+
+          tab.addEventListener("click", () => openFile(path));
+          close.addEventListener("click", (e) => {
+            e.stopPropagation();
+            closeTab(index);
+          });
+        });
+      }
+
+      function setEditorMode(filename) {
+        const ext = (filename.split(".").pop() || "").toLowerCase();
+        let mode = null;
+        let label = "Plain Text";
+
+        if (ext === "html" || ext === "htm") { mode = "htmlmixed"; label = "HTML"; }
+        else if (ext === "css") { mode = "css"; label = "CSS"; }
+        else if (ext === "js") { mode = "javascript"; label = "JavaScript"; }
+        else if (ext === "json") { mode = { name: "javascript", json: true }; label = "JSON"; }
+        else if (ext === "md") { mode = "markdown"; label = "Markdown"; }
+        else if (ext === "xml" || ext === "svg") { mode = "xml"; label = "XML"; }
+
+        editor.setOption("mode", mode);
+        document.getElementById("languageInfo").textContent = label;
+      }
+
+      function updateCursor() {
+        if (!editor) return;
+        const cursor = editor.getCursor();
+        document.getElementById("cursorInfo").textContent =
+          `Ln ${cursor.line + 1}, Col ${cursor.ch + 1}`;
+      }
+
+      // =========================================================
+      // SAVE
+      // =========================================================
+
+      function saveCurrentFile() {
+        if (state.activePath) {
+          const node = findNode(state.activePath);
+          if (node) node.content = editor.getValue();
+        }
+        saveState();
+        setSaveStatus("Saved");
+      }
+
+      function setSaveStatus(text) {
+        document.getElementById("saveStatus").textContent = text;
+      }
+
+      // =========================================================
+      // MODAL
+      // =========================================================
+
+      function showModal(mode, parent = null, existingName = "") {
+        modalMode = mode;
+        modalParent = parent;
+
+        const backdrop = document.getElementById("modalBackdrop");
+        const title = document.getElementById("modalTitle");
+        const input = document.getElementById("modalInput");
+        const confirm = document.getElementById("modalConfirm");
+
+        if (mode === "file") { title.textContent = "Create New File"; confirm.textContent = "Create"; input.placeholder = "example.html"; }
+        else if (mode === "folder") { title.textContent = "Create New Folder"; confirm.textContent = "Create"; input.placeholder = "folder-name"; }
+        else if (mode === "rename") { title.textContent = "Rename"; confirm.textContent = "Rename"; input.placeholder = "New name"; }
+        else if (mode === "project") { title.textContent = "New Project"; confirm.textContent = "Create"; input.placeholder = "Project name"; }
+
+        input.value = existingName;
+        backdrop.classList.add("show");
+        setTimeout(() => { input.focus(); input.select(); }, 50);
+      }
+
+      function closeModal() {
+        document.getElementById("modalBackdrop").classList.remove("show");
+        modalMode = null;
+        modalParent = null;
+      }
+
+      function confirmModal() {
+        const input = document.getElementById("modalInput");
+        const name = input.value.trim();
+
+        if (!name) { showToast("Enter a name"); return; }
+
+        if (modalMode === "project") { createNewProject(name); closeModal(); return; }
+
+        if (modalMode === "rename") {
+          if (!contextTarget) { closeModal(); return; }
+
+          const node = contextTarget.node;
+          const parent = getParent(contextTarget.path);
+          if (!parent) { closeModal(); return; }
+
+          if (parent.children.some(x => x !== node && x.name === name)) {
+            showToast("A file or folder with that name already exists");
+            return;
+          }
+
+          node.name = name;
+
+          if (state.activePath && pathString(state.activePath) === pathString(contextTarget.path)) {
+            state.activePath = [...contextTarget.path.slice(0, -1), name];
+          }
+
+          state.openTabs = state.openTabs.map(p =>
+            pathString(p) === pathString(contextTarget.path) ?
+            [...p.slice(0, -1), name] : p
+          );
+
+          closeContextMenu();
+          renderTree();
+          renderTabs();
+          saveState();
+
+          if (state.activePath) {
+            const active = findNode(state.activePath);
+            if (active) {
+              document.getElementById("filePath").textContent = pathString(state.activePath);
+            }
+          }
+
+          closeModal();
+          return;
+        }
+
+        const parent = modalParent || state.root;
+
+        if (parent.children.some(x => x.name === name)) {
+          showToast("Name already exists");
+          return;
+        }
+
+        if (modalMode === "file") {
+          parent.children.push({ type: "file", name: name, content: getStarterContent(name) });
+        }
+
+        if (modalMode === "folder") {
+          parent.children.push({ type: "folder", name: name, children: [] });
+        }
+
+        const parentPath = getPath(state.root, parent) || [];
+        state.expanded[pathString(parentPath)] = true;
+
+        renderTree();
+        saveState();
+        closeModal();
+
+        if (modalMode === "file") {
+          openFile([...parentPath, name]);
+        }
+      }
+
+      function getStarterContent(name) {
+        const ext = (name.split(".").pop() || "").toLowerCase();
+
+        if (ext === "html" || ext === "htm") {
+          return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${name}</title>
+</head>
+<body>
+</body>
+</html>`;
+        }
+
+        if (ext === "css") {
+          return `/* ${name} */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}`;
+        }
+
+        if (ext === "js") {
+          return `// ${name}
+console.log("Hello from FABLOCK");`;
+        }
+
+        if (ext === "json") {
+          return `{
+    "name": "FABLOCK",
+    "version": "1.0.0"
+}`;
+        }
+
+        return "";
+      }
+
+      // =========================================================
+      // NEW PROJECT
+      // =========================================================
+
+      function createNewProject(name) {
+        state = {
+          projectName: name,
+          root: {
+            type: "folder",
+            name: name,
+            children: [{
+                type: "file",
+                name: "index.html",
+                content: getStarterContent("index.html")
+              },
+              {
+                type: "folder",
+                name: "src",
+                children: []
+              },
+              {
+                type: "folder",
+                name: "assets",
+                children: []
+              }
+            ]
+          },
+          activePath: null,
+          openTabs: [],
+          expanded: {}
+        };
+
+        document.getElementById("projectLabel").textContent = name;
+
+        if (editor) editor.setValue("");
+        document.getElementById("emptyEditor").classList.remove("hidden");
+        document.getElementById("filePath").textContent = "No file selected";
+
+        renderTree();
+        renderTabs();
+        saveState();
+        showToast("Project created");
+      }
+
+      // =========================================================
+      // DELETE
+      // =========================================================
+
+      function deleteContextTarget() {
+        if (!contextTarget) return;
+
+        const path = contextTarget.path;
+        const node = contextTarget.node;
+        const parent = getParent(path);
+
+        if (!parent) return;
+
+        if (!confirm(`Delete "${node.name}"?`)) return;
+
+        parent.children = parent.children.filter(x => x !== node);
+        const deletedPath = pathString(path);
+
+        state.openTabs = state.openTabs.filter(p =>
+          !(pathString(p) === deletedPath || pathString(p).startsWith(deletedPath + " / "))
+        );
+
+        if (state.activePath && (
+            pathString(state.activePath) === deletedPath ||
+            pathString(state.activePath).startsWith(deletedPath + " / ")
+          )) {
+          state.activePath = null;
+          editor.setValue("");
+          document.getElementById("emptyEditor").classList.remove("hidden");
+          document.getElementById("filePath").textContent = "No file selected";
+        }
+
+        renderTree();
+        renderTabs();
+        closeContextMenu();
+        saveState();
+        showToast("Deleted");
+      }
+
+      // =========================================================
+      // CONTEXT MENU
+      // =========================================================
+
+      function showContextMenu(x, y) {
+        const menu = document.getElementById("contextMenu");
+        menu.style.left = Math.min(x, window.innerWidth - 190) + "px";
+        menu.style.top = Math.min(y, window.innerHeight - 230) + "px";
+        menu.classList.add("show");
+      }
+
+      function closeContextMenu() {
+        document.getElementById("contextMenu").classList.remove("show");
+      }
+
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".context-menu")) closeContextMenu();
+      });
+
+      // =========================================================
+      // PREVIEW
+      // =========================================================
+
+      function runPreview() {
+        saveCurrentFile();
+
+        const htmlNode = findFirstFile(state.root, "index.html");
+        if (!htmlNode) {
+          showToast("Create an index.html first");
+          return;
+        }
+
+        let html = htmlNode.content || "";
+
+        const cssFiles = collectFiles(state.root).filter(f => f.name.toLowerCase().endsWith(".css"));
+        const jsFiles = collectFiles(state.root).filter(f => f.name.toLowerCase().endsWith(".js"));
+
+        const cssText = cssFiles.map(f => f.content || "").join("\n");
+        const jsText = jsFiles.map(f => f.content || "").join("\n");
+
+        if (cssText) {
+          const style = `<style>${cssText}</style>`;
+          if (html.includes("</head>")) {
+            html = html.replace("</head>", style + "</head>");
+          } else {
+            html = style + html;
+          }
+        }
+
+        if (jsText) {
+          const script = `<script>\n${jsText}\n<\/script>`;
+          if (html.includes("</body>")) {
+            html = html.replace("</body>", script + "</body>");
+          } else {
+            html += script;
+          }
+        }
+
+        const iframe = document.getElementById("previewFrame");
+        iframe.srcdoc = html;
+        document.getElementById("preview").classList.add("show");
+      }
+
+      // =========================================================
+      // EXPORT ZIP
+      // =========================================================
+
+      async function exportProject() {
+        saveCurrentFile();
+
+        const zip = new JSZip();
+        const files = collectFiles(state.root);
+
+        for (const file of files) {
+          const path = getPath(state.root, file);
+          zip.file(path.slice(1).join("/"), file.content || "");
+        }
+
+        const blob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = (state.projectName.replace(/[^\w\-]+/g, "_")) + ".zip";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast("Project exported");
+      }
+
+      // =========================================================
+      // SHARE
+      // =========================================================
+
+      async function shareProject() {
+        saveCurrentFile();
+
+        const text = `FABLOCK CODE PROJECT\n\nProject: ${state.projectName}\n\nFiles:\n${
+          collectFiles(state.root).map(f => {
+            const p = getPath(state.root, f);
+            return "• " + p.slice(1).join("/");
+          }).join("\n")
+        }`;
+
+        if (navigator.share) {
+          try { await navigator.share({ title: state.projectName, text }); } catch (e) {}
+        } else {
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast("Project information copied");
+          } catch (e) {
+            showToast("Sharing not supported");
+          }
+        }
+      }
+
+      // =========================================================
+      // FORMAT
+      // =========================================================
+
+      function formatCurrent() {
+        if (!editor) return;
+
+        const text = editor.getValue();
+        const ext = state.activePath ?
+          (state.activePath[state.activePath.length - 1].split(".").pop() || "").toLowerCase() :
+          "";
+
+        if (ext === "json") {
+          try {
+            const formatted = JSON.stringify(JSON.parse(text), null, 4);
+            editor.setValue(formatted);
+            showToast("JSON formatted");
+          } catch (e) {
+            showToast("Invalid JSON");
+          }
+          return;
+        }
+
+        if (ext === "html" || ext === "htm") {
+          let formatted = text.replace(/>\s*</g, "><").replace(/></g, ">\n<");
+          editor.setValue(formatted);
+          showToast("HTML formatted");
+          return;
+        }
+
+        showToast("Basic formatter available for HTML and JSON");
+      }
+
+      // =========================================================
+      // EVENT BINDING
+      // =========================================================
+
+      // Editor actions
+      document.getElementById("undoBtn").addEventListener("click", () => editor.undo());
+      document.getElementById("redoBtn").addEventListener("click", () => editor.redo());
+      document.getElementById("cutBtn").addEventListener("click", () => document.execCommand("cut"));
+      document.getElementById("copyBtn").addEventListener("click", () => {
+        const selection = editor.getSelection();
+        if (selection) {
+          navigator.clipboard?.writeText(selection);
+          showToast("Copied");
+        }
+      });
+      document.getElementById("pasteBtn").addEventListener("click", async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          editor.replaceSelection(text);
+        } catch (e) {
+          showToast("Clipboard permission required");
+        }
+      });
+      document.getElementById("formatBtn").addEventListener("click", formatCurrent);
+
+      // Top bar buttons
+      document.getElementById("saveBtn").addEventListener("click", saveCurrentFile);
+      document.getElementById("runBtn").addEventListener("click", runPreview);
+      document.getElementById("newProjectBtn").addEventListener("click", () => showModal("project"));
+
+      // New file / folder
+      document.getElementById("newFileBtn").addEventListener("click", () => {
+        let parent = state.root;
+        if (state.activePath) {
+          const active = findNode(state.activePath);
+          if (active && active.type === "folder") parent = active;
+          else parent = getParent(state.activePath) || state.root;
+        }
+        showModal("file", parent);
+      });
+
+      document.getElementById("newFolderBtn").addEventListener("click", () => {
+        let parent = state.root;
+        if (state.activePath) {
+          const active = findNode(state.activePath);
+          if (active && active.type === "folder") parent = active;
+          else parent = getParent(state.activePath) || state.root;
+        }
+        showModal("folder", parent);
+      });
+
+      document.getElementById("refreshBtn").addEventListener("click", () => {
+        renderTree();
+        renderTabs();
+        showToast("Explorer refreshed");
+      });
+
+      document.getElementById("searchInput").addEventListener("input", renderTree);
+
+      // Modal events
+      document.getElementById("modalClose").addEventListener("click", closeModal);
+      document.getElementById("modalCancel").addEventListener("click", closeModal);
+      document.getElementById("modalConfirm").addEventListener("click", confirmModal);
+
+      document.getElementById("modalInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") confirmModal();
+        if (e.key === "Escape") closeModal();
+      });
+
+      document.getElementById("modalBackdrop").addEventListener("click", (e) => {
+        if (e.target.id === "modalBackdrop") closeModal();
+      });
+
+      // Context menu
+      document.getElementById("ctxOpen").addEventListener("click", () => {
+        if (!contextTarget) return;
+        if (contextTarget.node.type === "folder") {
+          state.expanded[pathString(contextTarget.path)] = true;
+          renderTree();
+        } else {
+          openFile(contextTarget.path);
+        }
+        closeContextMenu();
+      });
+
+      document.getElementById("ctxRename").addEventListener("click", () => {
+        if (!contextTarget) return;
+        showModal("rename", null, contextTarget.node.name);
+      });
+
+      document.getElementById("ctxNewFile").addEventListener("click", () => {
+        if (!contextTarget) return;
+        const parent = contextTarget.node.type === "folder" ?
+          contextTarget.node :
+          getParent(contextTarget.path);
+        showModal("file", parent);
+        closeContextMenu();
+      });
+
+      document.getElementById("ctxNewFolder").addEventListener("click", () => {
+        if (!contextTarget) return;
+        const parent = contextTarget.node.type === "folder" ?
+          contextTarget.node :
+          getParent(contextTarget.path);
+        showModal("folder", parent);
+        closeContextMenu();
+      });
+
+      document.getElementById("ctxDelete").addEventListener("click", deleteContextTarget);
+
+      // Preview controls
+      document.getElementById("closePreview").addEventListener("click", () => {
+        document.getElementById("preview").classList.remove("show");
+      });
+
+      document.getElementById("refreshPreview").addEventListener("click", runPreview);
+
+      // Mobile navigation
+      const sidebar = document.getElementById("sidebar");
+
+      document.getElementById("menuBtn").addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+      });
+
+      document.getElementById("filesNav").addEventListener("click", () => {
+        sidebar.classList.add("open");
+        document.querySelectorAll(".mobile-nav").forEach(b => b.classList.remove("active"));
+        document.getElementById("filesNav").classList.add("active");
+      });
+
+      document.getElementById("editorNav").addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        document.getElementById("preview").classList.remove("show");
+        editor.refresh();
+        document.querySelectorAll(".mobile-nav").forEach(b => b.classList.remove("active"));
+        document.getElementById("editorNav").classList.add("active");
+      });
+
+      document.getElementById("previewNav").addEventListener("click", () => {
+        runPreview();
+        document.querySelectorAll(".mobile-nav").forEach(b => b.classList.remove("active"));
+        document.getElementById("previewNav").classList.add("active");
+      });
+
+      document.getElementById("moreNav").addEventListener("click", () => {
+        const action = prompt(
+          "FABLOCK\n\n" +
+          "1 - Export ZIP\n" +
+          "2 - Share\n" +
+          "3 - New project\n" +
+          "4 - Save"
+        );
+
+        if (action === "1") exportProject();
+        if (action === "2") shareProject();
+        if (action === "3") showModal("project");
+        if (action === "4") saveCurrentFile();
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          saveCurrentFile();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
+          e.preventDefault();
+          exportProject();
+        }
+      });
+
+      // Swipe sidebar
+      let touchStartX = 0;
+
+      document.addEventListener("touchstart", (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+
+      document.addEventListener("touchend", (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const delta = endX - touchStartX;
+
+        if (window.innerWidth <= 760) {
+          if (delta > 80 && touchStartX < 40) sidebar.classList.add("open");
+          if (delta < -80) sidebar.classList.remove("open");
+        }
+      }, { passive: true });
+
+      // =========================================================
+      // INIT
+      // =========================================================
+
+      loadState();
+      initializeEditor();
+
+      document.getElementById("projectLabel").textContent = state.projectName;
+      renderTree();
+      renderTabs();
+
+      // Automatically open index.html if it exists
+      const indexPath = findPathByName(state.root, "index.html");
+      if (indexPath) {
+        setTimeout(() => openFile(indexPath), 150);
+      } else {
+        document.getElementById("emptyEditor").classList.remove("hidden");
+      }
+
+    })();
+  </script>
+</body>
+</html>
